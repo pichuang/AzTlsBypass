@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+build/
+dist/
+*.whl
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# PowerShell
+*.psd1.bak
+PublishLocal/
+*.nupkg
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/*.log
+
+# Local config
+.aztlsbypass/
+local-config.json
+
+# Build artefacts
+*.zip
+release/
+
+# Test result artefacts (contain hostnames / user paths — never commit)
+testResults.xml
+TestResults/
+coverage.xml
