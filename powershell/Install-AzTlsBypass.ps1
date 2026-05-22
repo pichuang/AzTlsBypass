@@ -28,6 +28,16 @@
 .PARAMETER ProxyUrl
     Optional corporate proxy URL written to the config before activation.
     Only honoured when ``-AutoEnable`` is also supplied.
+
+.PARAMETER CaCertPath
+    Optional path to a PEM CA bundle. When omitted, the installer will
+    look for *.crt / *.pem files in ``<repoRoot>/certs/`` and, if any
+    are found, merge them into ``~/.AzTlsBypass/certs/bundle.pem`` and
+    use that as the bundle. Only honoured when ``-AutoEnable`` is also
+    supplied.
+
+.PARAMETER NoAutoDetectCa
+    Disable auto-detection of CA files in ``<repoRoot>/certs/``.
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
@@ -38,7 +48,11 @@ param(
 
     [switch]$AutoEnable,
 
-    [string]$ProxyUrl
+    [string]$ProxyUrl,
+
+    [string]$CaCertPath,
+
+    [switch]$NoAutoDetectCa
 )
 
 $ErrorActionPreference = 'Stop'
@@ -104,6 +118,31 @@ if ($AutoEnable) {
     if ($ProxyUrl) {
         Set-AzTlsBypassConfig -ProxyUrl $ProxyUrl -Confirm:$false | Out-Null
         Write-Host "  Config: ProxyUrl = $ProxyUrl" -ForegroundColor Cyan
+    }
+
+    # Resolve CA: explicit param wins, otherwise auto-detect from <repoRoot>/certs/
+    $effectiveCa = $CaCertPath
+    if (-not $effectiveCa -and -not $NoAutoDetectCa) {
+        $resolver = Join-Path -Path $PSScriptRoot -ChildPath 'Resolve-AzTlsBypassUserCa.ps1'
+        $certsDir = Join-Path -Path (Split-Path -Parent $PSScriptRoot) -ChildPath 'certs'
+        if ((Test-Path -LiteralPath $resolver) -and (Test-Path -LiteralPath $certsDir)) {
+            . $resolver
+            $detected = Resolve-AzTlsBypassUserCa -CertsDir $certsDir
+            if ($detected) {
+                $effectiveCa = $detected.BundlePath
+                Write-Host "  Auto-detected CA from certs/: $($detected.Sources -join ', ')" -ForegroundColor Cyan
+                Write-Host "  Merged bundle: $effectiveCa" -ForegroundColor DarkGray
+            }
+        }
+    }
+
+    if ($effectiveCa) {
+        if (Test-Path -LiteralPath $effectiveCa) {
+            Set-AzTlsBypassConfig -CaCertPath $effectiveCa -Confirm:$false | Out-Null
+            Write-Host "  Config: CaCertPath = $effectiveCa" -ForegroundColor Cyan
+        } else {
+            Write-Host "  ⚠ CaCertPath not found, skipped: $effectiveCa" -ForegroundColor Yellow
+        }
     }
 
     Enable-AzTlsBypass -Persist -NoBanner -Confirm:$false

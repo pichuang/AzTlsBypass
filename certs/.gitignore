@@ -1,0 +1,13 @@
+# Ignore all certificate files dropped into this folder by end users.
+# CA public certs aren't strictly secret, but corporate CA Subject lines
+# can leak organisational details, so default to not committing them.
+*.crt
+*.pem
+*.cer
+*.der
+*.pfx
+*.p12
+
+# Keep this folder and its README in git
+!.gitignore
+!README.md

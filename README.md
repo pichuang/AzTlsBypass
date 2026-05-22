@@ -40,6 +40,8 @@ cd AzTlsBypass\powershell
 
 ## 快速使用
 
+**最簡情境(只有 Proxy,沒有 CA 憑證)**:
+
 ```powershell
 Import-Module AzTlsBypass
 
@@ -67,6 +69,28 @@ Get-AzTlsBypassStatus            # 看目前狀態與設定
 Disable-AzTlsBypass -Persist     # 停用並移除 $PROFILE 區塊
 .\Uninstall-AzTlsBypass.ps1      # 完整移除模組
 ```
+
+---
+
+## 加入企業 CA 憑證(推薦)
+
+把你的 CA `.crt` / `.pem` 檔案直接丟到 repo 根目錄的 **`certs/`** 資料夾,**一鍵安裝會自動偵測並啟用**:
+
+```
+certs/
+├── README.md
+└── contoso-proxy-ca.crt   ← 你放的檔案
+```
+
+接著雙擊 `powershell\點兩下安裝-AzTlsBypass.cmd`(或執行 `OneClick-Install.ps1`),腳本會:
+
+1. 自動偵測 `certs/` 內的 `.crt` / `.pem`
+2. 合併成單一 bundle 寫到 `~/.AzTlsBypass/certs/bundle.pem`
+3. 設為 `CaCertPath` 並啟用
+
+詳細格式、`.cer` 轉 `.pem`、從 Windows 信任根匯出 CA 等,請見 [certs/README.md](certs/README.md)。
+
+> 補充說明:目前版本(0.1.0)的 monkey-patch 對 `az login` 路徑無條件 `verify=False`,因此 CA bundle **暫不會被 `az login` 用於實際驗證**,但會寫入 `REQUESTS_CA_BUNDLE` 供其他工具使用。設計理由與後續演進見 [DEVELOPER.md § B](DEVELOPER.md#b-設定-ca-憑證--請先讀懂目前的實際行為)。
 
 ---
 

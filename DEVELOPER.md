@@ -50,6 +50,8 @@ Set-AzTlsBypassConfig -ProxyUrl ''
 
 ### B. 設定 CA 憑證 — 請先讀懂目前的實際行為
 
+> 💡 **推薦方式:把 `.crt` / `.pem` 放到 repo 根目錄的 [`certs/`](../certs/) 資料夾,一鍵安裝會自動偵測、合併、設定**,不需要再手動指定路徑。本節之後的內容是給「沒透過一鍵安裝、或需要客製路徑」的進階使用者。
+
 `AzTlsBypass` 的核心是在 Python 啟動時 monkey-patch `requests.sessions.Session`,把 `verify=False` **無條件**強制套到整個程序。也就是說:
 
 > ⚠️ **目前版本(0.1.0)無論你是否提供 `-CaCertPath`,`az login` 走的 HTTP 請求都不會做 TLS 憑證驗證。**
@@ -199,6 +201,9 @@ Publish-Module -Path ./powershell/AzTlsBypass -NuGetApiKey '<YOUR_KEY>' -Verbose
 
 ```
 AzTlsBypass/
+├── certs/                  # ★ 使用者放企業 CA 憑證的地方(.crt/.pem 不入 git)
+│   ├── README.md
+│   └── .gitignore
 ├── core/                   # 共用 Python 邏輯
 │   └── tls_bypass_core.py
 ├── powershell/
@@ -212,6 +217,7 @@ AzTlsBypass/
 │   ├── Uninstall-AzTlsBypass.ps1
 │   ├── OneClick-Install.ps1
 │   ├── OneClick-Uninstall.ps1
+│   ├── Resolve-AzTlsBypassUserCa.ps1   # 偵測 certs/ 並合併成 bundle
 │   ├── 點兩下安裝-AzTlsBypass.cmd
 │   └── 點兩下移除-AzTlsBypass.cmd
 ├── extension/              # L2 az extension (規劃中)

@@ -137,6 +137,27 @@ try {
         $ProxyUrl = Ask-String -Message '  企業 Proxy URL (例: http://proxy.example.com:8080)' `
                                -ValidatePattern '^https?://[^\s]+$'
     }
+
+    # Auto-detect CA bundle from <repoRoot>/certs/ before prompting.
+    if (-not $CaCertPath) {
+        $resolver = Join-Path -Path $PSScriptRoot -ChildPath 'Resolve-AzTlsBypassUserCa.ps1'
+        if (Test-Path -LiteralPath $resolver) {
+            . $resolver
+            $certsDir = Join-Path -Path $repoRoot -ChildPath 'certs'
+            $detected = Resolve-AzTlsBypassUserCa -CertsDir $certsDir
+            if ($detected) {
+                $sourceList = ($detected.Sources -join ', ')
+                Write-Host "  偵測到 certs/ 內的 CA 憑證: $sourceList" -ForegroundColor Green
+                Write-Host "  將寫入合併後的 bundle: $($detected.BundlePath)" -ForegroundColor DarkGray
+                if (Ask-Confirm -Message '  使用此 CA bundle?' -Default 'Y') {
+                    $CaCertPath = $detected.BundlePath
+                }
+            } else {
+                Write-Host "  (certs/ 資料夾中沒有 CA 憑證 — 你可以把 .crt/.pem 放進去後重跑,或現在手動輸入路徑)" -ForegroundColor DarkGray
+            }
+        }
+    }
+
     if (-not $CaCertPath) {
         $CaCertPath = Ask-String -Message '  企業 CA bundle .crt/.pem 路徑'
     }
@@ -151,20 +172,16 @@ try {
     # ------------------------------------------------------------
     Write-Host '[3/4] 安裝模組並啟用永久模式' -ForegroundColor Cyan
     $installerArgs = @{
-        Scope      = 'CurrentUser'
-        Force      = $true
-        AutoEnable = $true
+        Scope          = 'CurrentUser'
+        Force          = $true
+        AutoEnable     = $true
+        NoAutoDetectCa = $true   # OneClick already resolved CA above
     }
-    if ($ProxyUrl) { $installerArgs['ProxyUrl'] = $ProxyUrl }
+    if ($ProxyUrl)    { $installerArgs['ProxyUrl']    = $ProxyUrl }
+    if ($CaCertPath)  { $installerArgs['CaCertPath']  = $CaCertPath }
 
     & $installer @installerArgs
 
-    # CA path is set AFTER install because Install handles -ProxyUrl only.
-    if ($CaCertPath) {
-        Import-Module AzTlsBypass -Force -ErrorAction Stop
-        Set-AzTlsBypassConfig -CaCertPath $CaCertPath -Confirm:$false | Out-Null
-        Write-Host "  Config: CaCertPath = $CaCertPath" -ForegroundColor Cyan
-    }
     Write-Host ''
 
     # ------------------------------------------------------------
